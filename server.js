@@ -1,105 +1,83 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+
 const app = express();
 const port = process.env.PORT || 3021;
-// Middleware per parsejar el cos de les sol·licituds a JSON
-//app.use(express.json());
-//app.use(express.urlencoded({ extended: true }));
-// Connecta't a MongoDB (modifica l'URI amb la teva pròpia cadena de connexió)
 
-//const uri = "mongodb+srv://agarci9:xxxx@cluster0.gc1mk.mongodb.net/albums?appName=Cluster0";
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const uri = process.env.MONGO_URI;
-console.log("URI: ", uri);
+console.log("URI:", uri);
 
-//const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true },  useNewUrlParser: true, useUnifiedTopology: true };
-const clientOptions = { };
+mongoose.connect(uri, {
+  dbName: 'CotxesEsportius' 
+})
+.then(() => console.log('Connected to MongoDB: CotxesEsportius'))
+.catch(err => console.error('MongoDB connection error:', err));
 
-mongoose.connect(uri, clientOptions)
-  .then(() => console.log('Connected to MongoDB: albums'))
-  .catch(err => console.log('Error connecting to MongoDB:', err));
-
-// Definició del model de dades (un exemple simple d'un model de "Usuari")
-const albumsSchema = new mongoose.Schema({
-  "$jsonSchema": {
-    "bsonType": "object",
-    "required": [
-      "_id",
-      "artist",
-      "date",
-      "title"
-    ],
-    "properties": {
-      "_id": {
-        "bsonType": "objectId"
-      },
-      "artist": {
-        "bsonType": "string"
-      },
-      "date": {
-        "bsonType": "date"
-      },
-      "title": {
-        "bsonType": "string"
-      }
-    }
-  }
+const cotxesSchema = new mongoose.Schema({
+  marca: { type: String, required: true },
+  model: { type: String, required: true },
+  potenciaCV: Number,
+  preu: Number,
+  dataAlta: Date,
+  disponible: Boolean,
+  descripcio: String
 });
 
-const Albums = mongoose.model('albums', albumsSchema, 'albums');
+const Cotxe = mongoose.model('Cotxe', cotxesSchema, 'cotxes');
 
-
-/******************************************************** */
-/******************************************************** */
-/******************************************************** */
-/******************************************************** */
-/******************************************************** */
-/**
- * END POINTS
- */
-
-// Ruta a l'arrel
 app.get('/', (req, res) => {
-  res.send('Yout API is running!');
+  res.send('API CotxesEsportius OK');
 });
 
-// Ruta per obtenir albums entre dates
-app.get('/filterdates/:dataini/:datafi', async (req, res) => {
-    try {
-      const { dataini, datafi } = req.params;
-      console.log("ENTRE DATES: ",dataini, datafi);
-      const albums = await Albums.find({
-        date: { $gte: dataini, $lte: datafi }
-      });
-  
-      if (albums.length === 0) {
-        return res.status(404).json({ message: 'No album found in this date range' });
-      }
-  
-      res.status(200).json(albums);
-    } catch (err) {
-      res.status(500).json({ message: 'Error fetching album', error: err.message });
-    }
-});
-
-// Ruta per obtenir tots els usuaris
-app.get('/albums', async (req, res) => {
+app.get('/list', async (req, res) => {
   try {
-    const albums = await Albums.find();
-    res.status(200).json(albums);
-    console.log("working");
+    const cotxes = await Cotxe.find();
+    res.status(200).json(cotxes);
   } catch (err) {
-    res.status(500).json({ message: 'Error fetching albums', error: err.message });
+    res.status(500).json({
+      message: 'Error fetching cars',
+      error: err.message
+    });
   }
 });
 
-/******************************************************** */
-/******************************************************** */
-/******************************************************** */
-/******************************************************** */
-/******************************************************** */
-// changed
-// Inicia el servidor
-app.listen(port,  '0.0.0.0', () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.post('/add', async (req, res) => {
+  try {
+    const cotxe = new Cotxe(req.body);
+    await cotxe.save();
+    res.status(201).json(cotxe);
+  } catch (err) {
+    res.status(400).json({
+      message: 'Error adding car',
+      error: err.message
+    });
+  }
+});
+
+app.get('/list/:dataini/:datafi', async (req, res) => {
+  try {
+    const { dataini, datafi } = req.params;
+
+    const cotxes = await Cotxe.find({
+      dataAlta: {
+        $gte: new Date(dataini),
+        $lte: new Date(datafi)
+      }
+    });
+
+    res.status(200).json(cotxes);
+  } catch (err) {
+    res.status(500).json({
+      message: 'Error filtering cars',
+      error: err.message
+    });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 });
