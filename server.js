@@ -9,13 +9,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const uri = process.env.MONGO_URI;
-console.log("URI:", uri);
+console.log("Conectando a MongoDB con URI:", uri);
 
 mongoose.connect(uri, {
-  dbName: 'CotxesEsportius' 
+  dbName: 'CotxesEsportius'
 })
-.then(() => console.log('Connected to MongoDB: CotxesEsportius'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => console.log('✅ Conectado a MongoDB: CotxesEsportius'))
+.catch(err => console.error('❌ Error de conexión a MongoDB:', err));
 
 const cotxesSchema = new mongoose.Schema({
   marca: { type: String, required: true },
@@ -38,10 +38,7 @@ app.get('/list', async (req, res) => {
     const cotxes = await Cotxe.find();
     res.status(200).json(cotxes);
   } catch (err) {
-    res.status(500).json({
-      message: 'Error fetching cars',
-      error: err.message
-    });
+    res.status(500).json({ message: 'Error fetching cars', error: err.message });
   }
 });
 
@@ -51,10 +48,7 @@ app.post('/add', async (req, res) => {
     await cotxe.save();
     res.status(201).json(cotxe);
   } catch (err) {
-    res.status(400).json({
-      message: 'Error adding car',
-      error: err.message
-    });
+    res.status(400).json({ message: 'Error adding car', error: err.message });
   }
 });
 
@@ -71,13 +65,32 @@ app.get('/list/:dataini/:datafi', async (req, res) => {
 
     res.status(200).json(cotxes);
   } catch (err) {
-    res.status(500).json({
-      message: 'Error filtering cars',
-      error: err.message
-    });
+    res.status(500).json({ message: 'Error filtering cars', error: err.message });
+  }
+});
+
+app.put('/update/:id', async (req, res) => {
+  try {
+    const cotxe = await Cotxe.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    res.status(200).json(cotxe);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/delete/:id', async (req, res) => {
+  try {
+    await Cotxe.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Cotxe eliminat correctament' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`🚀 Server running on http://localhost:${port}`);
 });
